@@ -68,7 +68,7 @@ jobs:
         with:
           context: .
           pull: true
-          push: ${{ startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master' }}
-          cache-from: type=registry,ref=${{ steps.prep.outputs.tags }}:latest
+          push: true
+          cache-from: type=registry,ref=${{ steps.prep.outputs.image }}:latest
           cache-to: type=inline
           tags: ${{ steps.prep.outputs.tags }}
