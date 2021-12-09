@@ -35,8 +35,9 @@ func main() {
 	defer logger.Sync()
 
 	s := fasthttp.Server{
-		Handler: requestHandlerWrapper(logger),
-		Name:    "echo-service",
+		Handler:        requestHandlerWrapper(logger),
+		Name:           "echo-service",
+		ReadBufferSize: 8192,
 	}
 
 	logger.Info("Starting server", zap.String("port", env.HTTPPort))
