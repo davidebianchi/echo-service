@@ -12,9 +12,11 @@ import (
 type Headers map[string]string
 type Query map[string]string
 type Request struct {
-	Headers Headers `json:"headers"`
-	Query   Query   `json:"query"`
-	Path    string  `json:"path"`
+	Headers     Headers `json:"headers"`
+	Query       Query   `json:"query"`
+	Path        string  `json:"path"`
+	Method      string  `json:"method"`
+	RequestBody string  `json:"body,omitempty"`
 }
 
 type ResponseBody struct {
@@ -67,9 +69,11 @@ func requestHandlerWrapper(logger *zap.Logger) func(ctx *fasthttp.RequestCtx) {
 
 		responseBody := ResponseBody{
 			Request: Request{
-				Headers: headers,
-				Path:    string(ctx.Path()),
-				Query:   query,
+				Headers:     headers,
+				Path:        string(ctx.Path()),
+				Query:       query,
+				Method:      string(ctx.Method()),
+				RequestBody: string(ctx.Request.Body()),
 			},
 		}
 

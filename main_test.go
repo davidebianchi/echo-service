@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -43,6 +44,7 @@ func TestRequestHandler(t *testing.T) {
 				Path:    "/foobar",
 				Headers: getResponseHeaders(nil),
 				Query:   Query{},
+				Method:  http.MethodGet,
 			},
 		}, responseBody)
 	})
@@ -79,6 +81,40 @@ func TestRequestHandler(t *testing.T) {
 					"aaa": "bbb",
 					"ccc": "ddd",
 				},
+				Method: http.MethodGet,
+			},
+		}, responseBody)
+	})
+
+	t.Run("with request body", func(t *testing.T) {
+		ln, client := setupTestServer(t, requestHandler)
+		defer ln.Close()
+
+		reqBody := bytes.NewBufferString("my request body")
+
+		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/foobar", ln.Addr()), reqBody)
+		require.NoError(t, err)
+		res, err := client.Do(req)
+		require.NoError(t, err)
+
+		assertStatusCodeOK(t, res)
+		assertContentType(t, res)
+
+		body, err := ioutil.ReadAll(res.Body)
+		require.NoError(t, err)
+
+		responseBody := &ResponseBody{}
+		json.Unmarshal(body, responseBody)
+
+		require.Equal(t, &ResponseBody{
+			Request: Request{
+				Path: "/foobar",
+				Headers: getResponseHeaders(Headers{
+					"Content-Length": "15",
+				}),
+				Query:       Query{},
+				Method:      http.MethodPost,
+				RequestBody: "my request body",
 			},
 		}, responseBody)
 	})
@@ -114,7 +150,6 @@ func assertContentType(t *testing.T, res *http.Response) {
 }
 
 func getResponseHeaders(headers Headers) Headers {
-
 	h := Headers{
 		"Accept-Encoding": "gzip",
 		"Content-Length":  "0",
