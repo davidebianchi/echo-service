@@ -31,7 +31,6 @@ An example response of the service, running locally on :8080 and contacting it w
 
 With `POST` method and a request body, instead:
 
-```json
 An example response of the service, running locally on :8080 and contacting it with query `foo=bar` on path `/my-path`:
 
 ```json
