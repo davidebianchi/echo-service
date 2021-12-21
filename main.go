@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mia-platform/configlib"
+	"github.com/caarlos0/env/v6"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -21,14 +21,18 @@ type ResponseBody struct {
 	Request Request `json:"request"`
 }
 
+type environmentVariables struct {
+	HTTPPort string `env:"HTTP_PORT" envDefault:"8080"`
+	LogLevel string `env:"LOG_LEVEL" envDefault:"info"`
+}
+
 func main() {
-	var env EnvironmentVariables
-	err := configlib.GetEnvVariables(envVariablesConfig, &env)
-	if err != nil {
+	config := environmentVariables{}
+	if err := env.Parse(&config); err != nil {
 		panic(err.Error())
 	}
 
-	logger, err := setupLogger()
+	logger, err := setupLogger(config.LogLevel)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -40,8 +44,8 @@ func main() {
 		ReadBufferSize: 8192,
 	}
 
-	logger.Info("Starting server", zap.String("port", env.HTTPPort))
-	if err := s.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", env.HTTPPort)); err != nil {
+	logger.Info("Starting server", zap.String("port", config.HTTPPort))
+	if err := s.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", config.HTTPPort)); err != nil {
 		logger.Fatal("error in ListenAndServe: %s", zap.Error(err))
 	}
 }
