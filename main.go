@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/valyala/fasthttp"
@@ -24,8 +25,9 @@ type ResponseBody struct {
 }
 
 type environmentVariables struct {
-	HTTPPort string `env:"HTTP_PORT" envDefault:"8080"`
-	LogLevel string `env:"LOG_LEVEL" envDefault:"info"`
+	HTTPPort      string `env:"HTTP_PORT" envDefault:"8080"`
+	LogLevel      string `env:"LOG_LEVEL" envDefault:"info"`
+	ResponseDelay string `env:"RESPONSE_DELAY"`
 }
 
 func main() {
@@ -34,6 +36,8 @@ func main() {
 		panic(err.Error())
 	}
 
+	responseDelay := getResponseDelay(config.ResponseDelay)
+
 	logger, err := setupLogger(config.LogLevel)
 	if err != nil {
 		panic(err.Error())
@@ -41,7 +45,7 @@ func main() {
 	defer logger.Sync()
 
 	s := fasthttp.Server{
-		Handler:        requestHandlerWrapper(logger),
+		Handler:        requestHandlerWrapper(logger, responseDelay),
 		Name:           "echo-service",
 		ReadBufferSize: 8192,
 	}
@@ -52,7 +56,18 @@ func main() {
 	}
 }
 
-func requestHandlerWrapper(logger *zap.Logger) func(ctx *fasthttp.RequestCtx) {
+func getResponseDelay(delay string) time.Duration {
+	if delay == "" {
+		return 0
+	}
+	responseDelay, err := time.ParseDuration(delay)
+	if err != nil {
+		panic(fmt.Sprintf("invalid RESPONSE_DELAY: %s", err))
+	}
+	return responseDelay
+}
+
+func requestHandlerWrapper(logger *zap.Logger, responseDelay time.Duration) func(ctx *fasthttp.RequestCtx) {
 	return func(ctx *fasthttp.RequestCtx) {
 		logger.Debug("incoming request", zap.String("path", string(ctx.Path())))
 		ctx.Response.Header.SetContentType("application/json")
@@ -83,6 +98,10 @@ func requestHandlerWrapper(logger *zap.Logger) func(ctx *fasthttp.RequestCtx) {
 			ctx.Response.SetStatusCode(500)
 			ctx.Response.Write(nil)
 			return
+		}
+
+		if responseDelay != 0 {
+			time.Sleep(responseDelay)
 		}
 
 		ctx.Response.SetStatusCode(200)
