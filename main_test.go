@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -19,7 +20,7 @@ import (
 func TestRequestHandler(t *testing.T) {
 	logger := zap.NewNop()
 
-	requestHandler := requestHandlerWrapper(logger)
+	requestHandler := requestHandlerWrapper(logger, 0)
 
 	t.Run("base call - without query and headers", func(t *testing.T) {
 		ln, client := setupTestServer(t, requestHandler)
@@ -115,6 +116,39 @@ func TestRequestHandler(t *testing.T) {
 				Query:       Query{},
 				Method:      http.MethodPost,
 				RequestBody: "my request body",
+			},
+		}, responseBody)
+	})
+
+	t.Run("with response delay", func(t *testing.T) {
+		requestHandler := requestHandlerWrapper(logger, 1*time.Second)
+
+		ln, client := setupTestServer(t, requestHandler)
+		defer ln.Close()
+
+		req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s/foobar", ln.Addr()), nil)
+		require.NoError(t, err)
+
+		now := time.Now()
+		res, err := client.Do(req)
+		require.NoError(t, err)
+
+		require.InDelta(t, (1 * time.Second).Seconds(), time.Since(now).Seconds(), 0.1)
+		assertStatusCodeOK(t, res)
+		assertContentType(t, res)
+
+		body, err := ioutil.ReadAll(res.Body)
+		require.NoError(t, err)
+
+		responseBody := &ResponseBody{}
+		json.Unmarshal(body, responseBody)
+
+		require.Equal(t, &ResponseBody{
+			Request: Request{
+				Path:    "/foobar",
+				Headers: getResponseHeaders(nil),
+				Query:   Query{},
+				Method:  http.MethodGet,
 			},
 		}, responseBody)
 	})
