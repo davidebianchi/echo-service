@@ -69,7 +69,6 @@ func getResponseDelay(delay string) time.Duration {
 
 func requestHandlerWrapper(logger *zap.Logger, responseDelay time.Duration) func(ctx *fasthttp.RequestCtx) {
 	return func(ctx *fasthttp.RequestCtx) {
-		logger.Debug("incoming request", zap.String("path", string(ctx.Path())))
 		ctx.Response.Header.SetContentType("application/json")
 
 		headers := Headers{}
@@ -81,6 +80,13 @@ func requestHandlerWrapper(logger *zap.Logger, responseDelay time.Duration) func
 		ctx.QueryArgs().VisitAll(func(key, value []byte) {
 			query[string(key)] = string(value)
 		})
+
+		logger.Debug("incoming request",
+			zap.Any("headers", headers),
+			zap.ByteString("path", ctx.Path()),
+			zap.Any("query", query),
+			zap.ByteString("body", ctx.Request.Body()),
+		)
 
 		responseBody := ResponseBody{
 			Request: Request{
