@@ -74,3 +74,4 @@ jobs:
           cache-from: type=registry,ref=${{ steps.prep.outputs.image }}:latest
           cache-to: type=inline
           tags: ${{ steps.prep.outputs.tags }}
+          platforms: linux/amd64,linux/arm64
